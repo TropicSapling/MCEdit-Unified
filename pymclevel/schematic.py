@@ -26,7 +26,7 @@ import copy
 
 log = getLogger(__name__)
 
-__all__ = ['MCSchematic', 'INVEditChest']
+__all__ = ['MCSchematic', 'INVEditChest', 'StructureNBT']
 
 DEBUG = True
 
@@ -272,7 +272,7 @@ class MCSchematic(EntityLevel):
                 entity[p][0].value = newX
                 entity[p][2].value = newZ
             entity["Rotation"][0].value -= 90.0
-            if entity["id"].value in ("Painting", "ItemFrame") or MCEDIT_IDS.get(entity["id"]) in ('DEFS_ENTITIES_PAINTING', 'DEFS_ENTITIES_ITEM_FRAME'):
+            if entity["id"].value in ("Painting", "ItemFrame") or MCEDIT_IDS.get(entity["id"].value) in ('DEFS_ENTITIES_PAINTING', 'DEFS_ENTITIES_ITEM_FRAME'):
                 x, z = entity["TileX"].value, entity["TileZ"].value
                 newx = z
                 newz = self.Length - x - 1
@@ -344,7 +344,7 @@ class MCSchematic(EntityLevel):
             entity["Rotation"][0].value = newX
             entity["Rotation"][1].value = newY
 
-            if entity["id"].value in ("Painting", "ItemFrame") or MCEDIT_IDS.get(entity["id"]) in ('DEFS_ENTITIES_PAINTING', 'DEFS_ENTITIES_ITEM_FRAME'):
+            if entity["id"].value in ("Painting", "ItemFrame") or MCEDIT_IDS.get(entity["id"].value) in ('DEFS_ENTITIES_PAINTING', 'DEFS_ENTITIES_ITEM_FRAME'):
                 newX = self.Width - entity["TileY"].value - 1
                 newY = entity["TileX"].value
                 entity["TileX"].value = newX
@@ -378,7 +378,7 @@ class MCSchematic(EntityLevel):
             entity["Pos"][1].value = self.Height - entity["Pos"][1].value
             entity["Motion"][1].value = -entity["Motion"][1].value
             entity["Rotation"][1].value = -entity["Rotation"][1].value
-            if entity["id"].value in ("Painting", "ItemFrame") or MCEDIT_IDS.get(entity["id"]) in ('DEFS_ENTITIES_PAINTING', 'DEFS_ENTITIES_ITEM_FRAME'):
+            if entity["id"].value in ("Painting", "ItemFrame") or MCEDIT_IDS.get(entity["id"].value) in ('DEFS_ENTITIES_PAINTING', 'DEFS_ENTITIES_ITEM_FRAME'):
                 entity["TileY"].value = self.Height - entity["TileY"].value - 1
         for tileEntity in self.TileEntities:
             tileEntity["y"].value = self.Height - tileEntity["y"].value - 1
@@ -448,7 +448,7 @@ class MCSchematic(EntityLevel):
             # Special logic for old width painting as TileX/TileZ favours -x/-z
 
             try:
-                if entity["id"].value in ("Painting", "ItemFrame") or MCEDIT_IDS.get(entity["id"]) in ('DEFS_ENTITIES_PAINTING', 'DEFS_ENTITIES_ITEM_FRAME'):
+                if entity["id"].value in ("Painting", "ItemFrame") or MCEDIT_IDS.get(entity["id"].value) in ('DEFS_ENTITIES_PAINTING', 'DEFS_ENTITIES_ITEM_FRAME'):
                     facing = entity.get("Facing", entity.get("Direction"))
                     if facing is None:
                         dirFacing = entity.get("Dir")
@@ -461,7 +461,7 @@ class MCSchematic(EntityLevel):
                         else:
                             raise Exception("None of tags Facing/Direction/Dir found in entity %s during flipping -  %r" % (entity["id"].value, entity))
 
-                if entity["id"].value == "Painting" or MCEDIT_IDS.get(entity["id"]) == 'DEFS_ENTITIES_PAINTING':
+                if entity["id"].value == "Painting" or MCEDIT_IDS.get(entity["id"].value) == 'DEFS_ENTITIES_PAINTING':
                     if facing.value == 2:
                         entity["TileX"].value = self.Width - entity["TileX"].value - self.paintingMap[entity["Motive"].value] % 2
                     elif facing.value == 0:
@@ -473,7 +473,7 @@ class MCSchematic(EntityLevel):
                     elif facing.value == 1:
                         entity["TileZ"].value = entity["TileZ"].value + 1 - self.paintingMap[entity["Motive"].value] % 2
                     facing.value = northSouthPaintingMap[facing.value]
-                elif entity["id"].value == "ItemFrame" or MCEDIT_IDS.get(entity["id"]) == 'DEFS_ENTITIES_ITEM_FRAME':
+                elif entity["id"].value == "ItemFrame" or MCEDIT_IDS.get(entity["id"].value) == 'DEFS_ENTITIES_ITEM_FRAME':
                     entity["TileX"].value = self.Width - entity["TileX"].value - 1
                     facing.value = northSouthPaintingMap[facing.value]
             except:
@@ -523,7 +523,7 @@ class MCSchematic(EntityLevel):
             # Special logic for old width painting as TileX/TileZ favours -x/-z
 
             try:
-                if entity["id"].value in ("Painting", "ItemFrame") or MCEDIT_IDS.get(entity["id"]) in ('DEFS_ENTITIES_PAINTING', 'DEFS_ENTITIES_ITEM_FRAME'):
+                if entity["id"].value in ("Painting", "ItemFrame") or MCEDIT_IDS.get(entity["id"].value) in ('DEFS_ENTITIES_PAINTING', 'DEFS_ENTITIES_ITEM_FRAME'):
                     facing = entity.get("Facing", entity.get("Direction"))
                     if facing is None:
                         dirFacing = entity.get("Dir")
@@ -536,7 +536,7 @@ class MCSchematic(EntityLevel):
                         else:
                             raise Exception("None of tags Facing/Direction/Dir found in entity %s during flipping -  %r" % (entity["id"].value, entity))
 
-                if entity["id"].value == "Painting" or MCEDIT_IDS.get(entity["id"]) == 'DEFS_ENTITIES_PAINTING':
+                if entity["id"].value == "Painting" or MCEDIT_IDS.get(entity["id"].value) == 'DEFS_ENTITIES_PAINTING':
                     if facing.value == 1:
                         entity["TileZ"].value = self.Length - entity["TileZ"].value - 2 + self.paintingMap[entity["Motive"].value] % 2
                     elif facing.value == 3:
@@ -548,7 +548,7 @@ class MCSchematic(EntityLevel):
                     elif facing.value == 2:
                         entity["TileX"].value = entity["TileX"].value - 1 + self.paintingMap[entity["Motive"].value] % 2
                     facing.value = eastWestPaintingMap[facing.value]
-                elif entity["id"].value == "ItemFrame" or MCEDIT_IDS.get(entity["id"]) == 'DEFS_ENTITIES_ITEM_FRAME':
+                elif entity["id"].value == "ItemFrame" or MCEDIT_IDS.get(entity["id"].value) == 'DEFS_ENTITIES_ITEM_FRAME':
                     entity["TileZ"].value = self.Length - entity["TileZ"].value - 1
                     facing.value = eastWestPaintingMap[facing.value]
             except:
@@ -583,7 +583,7 @@ class MCSchematic(EntityLevel):
         root_tag = nbt.TAG_Compound()
         invTag = nbt.TAG_List()
         root_tag["Inventory"] = invTag
-        for slot in range(9, 36):
+        for slot in xrange(9, 36):
             itemTag = nbt.TAG_Compound()
             itemTag["Slot"] = nbt.TAG_Byte(slot)
             itemTag["Count"] = nbt.TAG_Byte(count)
@@ -662,7 +662,7 @@ class ZipSchematic(infiniteworld.MCInfdevOldLevel):
 
         tempdir = tempfile.mktemp("schematic")
         if create is False:
-            zf = zipfile.ZipFile(filename)
+            zf = zipfile.ZipFile(filename, allowZip64=True)
             zf.extractall(tempdir)
             zf.close()
 
@@ -704,7 +704,7 @@ class ZipSchematic(infiniteworld.MCInfdevOldLevel):
 
         basedir = self.worldFolder.filename
         assert os.path.isdir(basedir)
-        with closing(zipfile.ZipFile(filename, "w", zipfile.ZIP_STORED)) as z:
+        with closing(zipfile.ZipFile(filename, "w", zipfile.ZIP_STORED, allowZip64=True)) as z:
             for root, dirs, files in os.walk(basedir):
                 # NOTE: ignore empty directories
                 for fn in files:
@@ -799,7 +799,7 @@ class StructureNBT(object):
     @classmethod
     def fromSchematic(cls, schematic):
         structure = cls(size=(schematic.Width, schematic.Height, schematic.Length), mats=namedMaterials[getattr(schematic, "Materials", 'Alpha')])
-        schematic = copy.deepcopy(schematic)
+        schematic = copy.copy(schematic)
         
         for (x, z, y), b_id in ndenumerate(schematic.Blocks):
             data = schematic.Data[x, z, y]
@@ -863,7 +863,7 @@ class StructureNBT(object):
         return (self._palette[index]["Name"], self._palette[index].get("Properties", {}))
             
     def get_palette_index(self, name, properties=None):  # TODO: Switch to string comparison of properties, instead of dict comparison
-        for i in range(len(self._palette)):
+        for i in xrange(len(self._palette)):
             if self._palette[i]["Name"] == name:
                 if properties and "Properties" in self._palette[i]:
                     for (key, value) in properties.iteritems():
@@ -875,7 +875,7 @@ class StructureNBT(object):
         return -1
         
     def _find_air(self):
-        for i in range(len(self._palette)):
+        for i in xrange(len(self._palette)):
             if self._palette[i]["Name"] == "minecraft:air":
                 return i
         return -1
@@ -907,9 +907,9 @@ class StructureNBT(object):
                                              )
         
         blockstate_api = BlockstateAPI.material_map.get(self._mat, BlockstateAPI.material_map[alphaMaterials])
-        for z in range(self._blocks.shape[2]):  # For some reason, ndenumerate() didn't work, but this does
-            for x in range(self._blocks.shape[0]):
-                for y in range(self._blocks.shape[1]):
+        for z in xrange(self._blocks.shape[2]):  # For some reason, ndenumerate() didn't work, but this does
+            for x in xrange(self._blocks.shape[0]):
+                for y in xrange(self._blocks.shape[1]):
                     
                     value = self._blocks[x, y, z]
                     name, properties = blockstate_api.idToBlockstate(*value)

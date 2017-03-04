@@ -14,21 +14,84 @@ import datetime
 
 log = logging.getLogger(__name__)
 
+
+class ThreadRS(threading.Thread):
+    # This class comes from: http://stackoverflow.com/questions/6893968/how-to-get-the-return-value-from-a-thread-in-python
+    # And may have been tweaked ;)
+    '''
+    This class uses a _return instance member to store the result of the underlying Thread object.
+    If 'callbacks' objects are send to the constructor, this '_result' object will be sent to all of them
+    at the end of the 'run' and 'join' method. The latest one also returns '_return' object.
+    '''
+    def __init__(self, group=None, target=None, name=None, callbacks=[],
+                 args=(), kwargs={}, Verbose=None):
+        '''
+        :callbacks: list: callable objects to send the thread result to.
+        For other arguments, see threading.Thread documentation.
+        '''
+        self.target = target
+        self.callbacks = callbacks
+        threading.Thread.__init__(self, group, target, name, args, kwargs, Verbose)
+        self._return = None
+
+    def run(self):
+        if self._Thread__target is not None:
+            self._return = self._Thread__target(*self._Thread__args,
+                                                **self._Thread__kwargs)
+            for callback in self.callbacks:
+                callback(self._return)
+
+    def join(self):
+        try:
+            threading.Thread.join(self)
+        except Exception, e:
+            print e
+        for callback in self.callbacks:
+            callback(self._return)
+        return self._return
+
+    def __repr__(self, *args, **kwargs):
+        return '%s::%s'%(ThreadRS, self.target)
+
+
+def threadable(func):
+    def wrapper(*args, **kwargs):
+        instance = None
+        for arg in args:
+            if isinstance(arg, PlayerCache):
+                instance = arg
+                break
+        with instance.cache_lock:
+            t = ThreadRS(target=func, args=args, kwargs=kwargs, callbacks=instance.targets)
+            t.daemon = True
+            t.start()
+            return t
+    return wrapper
+
+
 #@Singleton
 class PlayerCache:
     '''
     Used to cache Player names and UUID's, provides an small API to interface with it
     '''
     
-    PATH = userCachePath
+    _PATH = userCachePath
     TIMEOUT = 2.5
+    targets = [] # Used to send data update when subprocesses has finished.
     
     __shared_state = {}
     
     def __init__(self):
         self.__dict__ = self.__shared_state
+        self.last_error = None
+        self.error_count = 0
     
     # --- Utility Functions ---
+    def add_target(self, target):
+        global targets
+        if target not in self.targets:
+            self.targets.append(target)
+
     @staticmethod
     def insertSeperators(uuid):
         return uuid[:8] + "-" + uuid[8:12] + "-" + uuid[12:16] + "-" + uuid[16:20] + "-" + uuid[20:]
@@ -51,7 +114,7 @@ class PlayerCache:
             
     def save(self):
         if hasattr(self, "_cache"):
-            fp = open(self.PATH, 'w')
+            fp = open(self._PATH, 'w')
             json.dump(self._cache, fp, indent=4, separators=(',', ':'))
             fp.close()
     
@@ -59,12 +122,12 @@ class PlayerCache:
         '''
         Loads from the usercache.json file if it exists, if not an empty one will be generated
         '''
-        self._cache = {"Version": 2, "Connection Timeout": 2.5, "Cache": {}}
-        if not os.path.exists(self.PATH):
-            fp = open(self.PATH, 'w')
+        self._cache = {"Version": 2, "Connection Timeout": 10, "Cache": {}}
+        if not os.path.exists(self._PATH):
+            fp = open(self._PATH, 'w')
             json.dump(self._cache, fp)
             fp.close()
-        fp = open(self.PATH, 'r')
+        fp = open(self._PATH, 'r')
         try:
             json_in = json.load(fp)
             if "Version" not in json_in or json_in.get("Version", 0) != 2:
@@ -102,6 +165,8 @@ class PlayerCache:
                 
             to_refresh = to_refresh_successful + to_refresh_failed
             for uuid in to_refresh:
+                if self.error_count >= 4:
+                    break
                 self._getPlayerInfoUUID(uuid)
         self.save()
         
@@ -147,7 +212,7 @@ class PlayerCache:
         '''
         clean_uuid = uuid.replace("-","")
         player = self._cache["Cache"].get(clean_uuid, {})
-        return (self.insertSeperators(clean_uuid), player.get("Name", "<Unknown Name>"), clean_uuid)
+        return self.insertSeperators(clean_uuid), player.get("Name", "<Unknown Name>"), clean_uuid
     
     def _getDataFromCacheName(self, name):
         '''
@@ -189,7 +254,7 @@ class PlayerCache:
             if player.get("Name", "") == name:
                 return player.get("Successful", False)
         return False
-            
+
     def getPlayerInfo(self, arg, force=False, use_old_data=False):
         '''
         Recommended method to call to get Player data. Roughly determines whether a UUID or Player name was passed in 'arg'
@@ -206,16 +271,24 @@ class PlayerCache:
             if self.UUIDInCache(arg) and self._wasSuccessfulUUID(arg) and not force:
                 return self._getDataFromCacheUUID(arg)
             else:
-                return self._getPlayerInfoUUID(arg, use_old_data)
+                r = self._getPlayerInfoUUID(arg, use_old_data)
+                if r.__class__ == ThreadRS:
+                    c = arg.replace('-', '')
+                    return self.insertSeperators(c), 'Server not ready', c
         except ValueError:
             if self.nameInCache(arg) and self._wasSuccessfulName(arg) and not force:
                 return self._getDataFromCacheName(arg)
             else:
-                return self._getPlayerInfoName(arg)
+                r = self._getPlayerInfoName(arg)
+                if r.__class__ == ThreadRS:
+                    return 'Server not ready', arg, 'Server not ready'
+                else:
+                    return r
     
     # --- Player Data Getters ---
+    @threadable
     def _getPlayerInfoUUID(self, uuid, use_old_data=False):
-        clean_uuid = uuid.replace("-","")
+        clean_uuid = uuid.replace("-", "")
         player = self._cache["Cache"].get(clean_uuid, {})
         response = self._getDataFromURL("https://sessionserver.mojang.com/session/minecraft/profile/{}".format(clean_uuid))
         if response:
@@ -228,22 +301,23 @@ class PlayerCache:
                 self._cache["Cache"][clean_uuid] = player
                 self.temp_skin_cache[clean_uuid] = data
                 self.save()
-                return (self.insertSeperators(clean_uuid), player["Name"], clean_uuid)
+                return self.insertSeperators(clean_uuid), player["Name"], clean_uuid
             except:
                 player["Successful"] = False
                 self._cache["Cache"][clean_uuid] = player
                 if use_old_data and player.get("Name", "<Unknown Name>") != "<Unknown Name>":
-                    return (self.insertSeperators(clean_uuid), player["Name"], clean_uuid)
+                    return self.insertSeperators(clean_uuid), player["Name"], clean_uuid
                 else:
-                    return (self.insertSeperators(clean_uuid), "<Unknown Name>", clean_uuid)
+                    return self.insertSeperators(clean_uuid), "<Unknown Name>", clean_uuid
         else:
             player["Successful"] = False
             self._cache["Cache"][clean_uuid] = player
             if use_old_data and player.get("Name", "<Unknown Name>") != "<Unknown Name>":
-                return (self.insertSeperators(clean_uuid), player["Name"], clean_uuid)
+                return self.insertSeperators(clean_uuid), player["Name"], clean_uuid
             else:
-                return (self.insertSeperators(clean_uuid), "<Unknown Name>", clean_uuid)
-        
+                return self.insertSeperators(clean_uuid), "<Unknown Name>", clean_uuid
+    
+    @threadable
     def _getPlayerInfoName(self, name):
         response = self._getDataFromURL("https://api.mojang.com/users/profiles/minecraft/{}".format(name))
         if response:
@@ -256,11 +330,11 @@ class PlayerCache:
                 player["Successful"] = True
                 self._cache["Cache"][uuid] = player
                 self.save()
-                return (self.insertSeperators(uuid), player["Name"], uuid)
+                return self.insertSeperators(uuid), player["Name"], uuid
             except:
-                return ("<Unknown UUID>", name, "<Unknown UUID>")           
+                return "<Unknown UUID>", name, "<Unknown UUID>"
         else:
-            return ("<Unknown UUID>", name, "<Unknown UUID>")
+            return "<Unknown UUID>", name, "<Unknown UUID>"
         
     # --- Skin Getting ---
     def _parseSkinResponse(self, response):
@@ -277,6 +351,7 @@ class PlayerCache:
             print traceback.format_exc()
         return None
     
+    @threadable
     def getPlayerSkin(self, arg, force_download=True, instance=None):
         '''
         Gets the player's skin from Mojang's skin servers
@@ -292,51 +367,58 @@ class PlayerCache:
         '''
         toReturn = 'char.png'
         
-        uuid_sep, name, uuid = self.getPlayerInfo(arg)
-        if uuid == "<Unknown UUID>":
-            return toReturn
-        player = self._cache["Cache"][uuid]
-        skin_path = os.path.join("player-skins", uuid_sep.replace("-","_") + ".png")
-        #temp_skin_path = os.path.join("player-skin", uuid_sep.replace("-","_") + ".temp.png")
-        try:
-            if not force_download and os.path.exists(skin_path):
-                skin = Image.open(skin_path)
-                if skin.size == (64,64):
-                    skin = skin.crop((0,0,64,32))
-                    skin.save(skin_path)
-                toReturn = skin_path
-            elif force_download or not os.path.exists(skin_path):
-                if uuid in self.temp_skin_cache:
-                    parsed = self._parseSkinResponse(self.temp_skin_cache[uuid])
-                    if parsed is not None:
-                        self._saveSkin(uuid, parsed)
-                        toReturn = skin_path
-                        player["Skin"] = { "Timestamp": time.time() }
-                        self._cache["Cache"][uuid] = player
-                        del self.temp_skin_cache[uuid]
-                        self.save()
-                else:
-                    response = self._getDataFromURL("https://sessionserver.mojang.com/session/minecraft/profile/{}".format(uuid))
-                    if response is not None:
-                        parsed = self._parseSkinResponse(response)
+        raw_data = self.getPlayerInfo(arg)
+#         print "raw_data.__class__", raw_data.__class__
+        if raw_data.__class__ != ThreadRS:
+#             print 'raw_data', raw_data
+            uuid_sep, name, uuid = raw_data
+            if uuid == "<Unknown UUID>" or "Server not ready" in raw_data:
+#                 print 'returning', toReturn
+                return toReturn
+            player = self._cache["Cache"][uuid]
+            skin_path = os.path.join("player-skins", uuid_sep.replace("-","_") + ".png")
+            #temp_skin_path = os.path.join("player-skin", uuid_sep.replace("-","_") + ".temp.png")
+            try:
+                if not force_download and os.path.exists(skin_path):
+                    skin = Image.open(skin_path)
+                    if skin.size == (64,64):
+                        skin = skin.crop((0,0,64,32))
+                        skin.save(skin_path)
+                    toReturn = skin_path
+                elif force_download or not os.path.exists(skin_path):
+                    if uuid in self.temp_skin_cache:
+                        parsed = self._parseSkinResponse(self.temp_skin_cache[uuid])
                         if parsed is not None:
                             self._saveSkin(uuid, parsed)
                             toReturn = skin_path
                             player["Skin"] = { "Timestamp": time.time() }
                             self._cache["Cache"][uuid] = player
+                            del self.temp_skin_cache[uuid]
                             self.save()
-               
-        except IOError:
-            print "Couldn't find Image file ("+skin_path+") or the file may be corrupted"
-            if instance is not None:
-                instance.delete_skin(uuid_sep.replace("-","_"))
-                os.remove(skin_path)
-                print "Something happened, retrying"
-                toReturn = self.getPlayerSkin(arg, True, instance)
-        except Exception:
-            import traceback
-            print "Unknown error occurred while reading/downloading skin for "+str(uuid.replace("-","_")+".png")
-            print traceback.format_exc()
+                    else:
+                        response = self._getDataFromURL("https://sessionserver.mojang.com/session/minecraft/profile/{}".format(uuid))
+                        if response is not None:
+                            parsed = self._parseSkinResponse(response)
+                            if parsed is not None:
+                                self._saveSkin(uuid, parsed)
+                                toReturn = skin_path
+                                player["Skin"] = { "Timestamp": time.time() }
+                                self._cache["Cache"][uuid] = player
+                                self.save()
+                   
+            except IOError:
+                print "Couldn't find Image file ("+skin_path+") or the file may be corrupted"
+                if instance is not None:
+                    instance.delete_skin(uuid_sep.replace("-","_"))
+                    os.remove(skin_path)
+                    print "Something happened, retrying"
+                    toReturn = self.getPlayerSkin(arg, True, instance)
+            except Exception:
+                import traceback
+                print "Unknown error occurred while reading/downloading skin for "+str(uuid.replace("-","_")+".png")
+                print traceback.format_exc()
+        else:
+            toReturn = raw_data.join()
         return toReturn
     
     def _saveSkin(self, uuid, data):
@@ -361,18 +443,23 @@ class PlayerCache:
         import traceback
         try:
             response = urllib2.urlopen(url, timeout=self.TIMEOUT).read()
+            self.last_error = False
             return response
         except urllib2.HTTPError, e:
             log.warn("Encountered a HTTPError while trying to access \"" + url + "\"")
             log.warn("Error: " + str(e.code))
+            self.error_count += 1
         except urllib2.URLError, e:
             log.warn("Encountered an URLError while trying to access \"" + url + "\"")
             log.warn("Error: " + str(e.reason))
+            self.error_count += 1
         except httplib.HTTPException:
             log.warn("Encountered a HTTPException while trying to access \"" + url + "\"")
+            self.error_count += 1
         except Exception:
             log.warn("Unknown error occurred while trying to get data from URL: " + url)
             log.warn(traceback.format_exc())
+            self.error_count += 1
         return None
     
     def _postDataToURL(self, url, payload, headers):

@@ -7,6 +7,7 @@ from pprint import pformat
 import mclangres
 import json
 import os
+import pkg_resources
 
 NOTEX = (496, 496)
 
@@ -54,23 +55,40 @@ class Block(object):
 id_limit = 4096
 
 class BlockstateAPI(object):
-    material_map = {}
+    '''
+    An easy API to convert from numerical ID's to Blockstates and vice-versa. Each
+    material has its own instance of this class. You can access it in a variety of ways::
     
+        from pymclevel.materials import BlockstateAPI, alphaMaterials, pocketMaterials
+    
+        api = BlockStateAPI.material_map[alphaMaterials]
+        
+        api = alphaMaterials.blockstate_api
+    '''
+    material_map = {}
+
     def __init__(self, mats, definition_file):
         self._mats = mats
         self.block_map = {}
         self.blockstates = {}
-        
+
         for b in self._mats:
             if b.ID == 0:
                 b.stringID = "air"
             self.block_map[b.ID] = "minecraft:" + b.stringID
-        
-        with open(os.path.join("pymclevel", definition_file)) as def_file:
-            self.blockstates = json.load(def_file)
-            
+
+        # When running from a bundled app on Linux (and possibly on OSX) pkg_resource can't find the needed files.
+        if pkg_resources.resource_exists(__name__, definition_file):
+            # We're running from source or on Windows using the executable (<<== Not sure...)
+            with pkg_resources.resource_stream(__name__, definition_file) as def_file:
+                self.blockstates = json.load(def_file)
+        else:
+            # In all other cases, retrieve the file directly from the file system.
+            with open(os.path.join("pymclevel", definition_file)) as def_file:
+                self.blockstates = json.load(def_file)
+
         self.material_map[self._mats] = self
-        
+
     def idToBlockstate(self, bid, data):
         '''
         Converts from a numerical ID to a BlockState string
@@ -134,6 +152,16 @@ class BlockstateAPI(object):
     
     @staticmethod
     def stringifyBlockstate(name, properties):
+        '''
+        Turns a Blockstate into a single string
+        
+        :param name: The Block's base name. IE: grass, command_block, etc.
+        :type name: str
+        :param properties: A list of Property/Value pairs in dict form
+        :type properties: list
+        :return: A complete Blockstate in string form
+        :rtype: str
+        '''
         if not name.startswith("minecraft:"):
             name = "minecraft:" + name # This should be changed as soon as possible
         result = name + "["
@@ -145,6 +173,14 @@ class BlockstateAPI(object):
     
     @staticmethod
     def deStringifyBlockstate(blockstate):
+        '''
+        Turns a single Blockstate string into a base name, properties tuple
+        
+        :param blockstate: The Blockstate string
+        :type blockstate: str
+        :return: A tuple containing the base name and the properties for the Blockstate
+        :rtype: tuple 
+        '''
         seperated = blockstate.split("[")
         
         if len(seperated) == 1:
@@ -183,9 +219,9 @@ class MCMaterials(object):
         self.blockTextures = zeros((id_limit, 16, 6, 2), dtype='uint16')
         # Sets the array size for terrain.png
         self.blockTextures[:] = self.defaultTexture
-        self.names = [[defaultName] * 16 for _ in range(id_limit)]
-        self.aka = [[""] * 16 for _ in range(id_limit)]
-        self.search = [[""] * 16 for _ in range(id_limit)]
+        self.names = [[defaultName] * 16 for _ in xrange(id_limit)]
+        self.aka = [[""] * 16 for _ in xrange(id_limit)]
+        self.search = [[""] * 16 for _ in xrange(id_limit)]
 
         self.type = [["NORMAL"] * 16] * id_limit
         self.blocksByType = defaultdict(list)
@@ -264,7 +300,7 @@ class MCMaterials(object):
                             lowest_block = b
                 if lowest_block:
                     return lowest_block
-            else:
+            elif self.blockstate_api:
                 name, properties = self.blockstate_api.deStringifyBlockstate(key)
                 return self[self.blockstate_api.blockstateToID(name, properties)]
             raise KeyError("No blocks named: " + key)
@@ -314,8 +350,6 @@ class MCMaterials(object):
 
     def addJSONBlocksFromFile(self, filename):
         try:
-            import pkg_resources
-
             f = pkg_resources.resource_stream(__name__, filename)
         except (ImportError, IOError), e:
             log.debug("Cannot get resource_stream for %s %s"%(filename, e))
@@ -406,7 +440,7 @@ class MCMaterials(object):
                 texture[:] = [texture[r] for r in rot]
 
             for data, direction in tex_direction_data.items():
-                for _i in range(texDirMap.get(direction, 0)):
+                for _i in xrange(texDirMap.get(direction, 0)):
                     rot90cw()
                 self.blockTextures[blockID][int(data)] = texture
 
@@ -452,7 +486,7 @@ class MCMaterials(object):
 alphaMaterials = MCMaterials(defaultName="Future Block!")
 alphaMaterials.name = "Alpha"
 alphaMaterials.addJSONBlocksFromFile("minecraft.json")
-alphaMaterials.setup_blockstates("blockstate_definitions.json")
+alphaMaterials.setup_blockstates("pc_blockstates.json")
 
 classicMaterials = MCMaterials(defaultName="Not present in Classic")
 classicMaterials.name = "Classic"
@@ -465,6 +499,7 @@ indevMaterials.addJSONBlocksFromFile("indev.json")
 pocketMaterials = MCMaterials()
 pocketMaterials.name = "Pocket"
 pocketMaterials.addJSONBlocksFromFile("pocket.json")
+pocketMaterials.setup_blockstates("pe_blockstates.json")
 
 # --- Static block defs ---
 
@@ -1083,16 +1118,37 @@ pocketMaterials.UpdateGameBlock1 = pocketMaterials[248, 0]
 pocketMaterials.UpdateGameBlock2 = pocketMaterials[249, 0]
 pocketMaterials.info_reserved6 = pocketMaterials[255, 0]
 
+# pocketMaterials.RedstoneRepeaterOff = alphaMaterials[93, 0] 
+# pocketMaterials.RedstoneRepeaterOn = alphaMaterials[94, 0]
 
-def printStaticDefs(name):
+def printStaticDefs(name, file_name=None):
     # printStaticDefs('alphaMaterials')
+    # file_name: file to write the output to
     mats = eval(name)
+    msg = "MCEdit static definitions for '%s'\n\n"%name
+    mats_ids = []
     for b in sorted(mats.allBlocks):
-        print "{name}.{0} = {name}[{1},{2}]".format(
+        msg += "{name}.{0} = {name}[{1},{2}]\n".format(
             b.name.replace(" ", "").replace("(", "").replace(")", ""),
             b.ID, b.blockData,
             name=name,
         )
+        if b.ID not in mats_ids:
+            mats_ids.append(b.ID)
+    print msg
+    if file_name:
+        msg += "\nNumber of materials: %s\n%s"%(len(mats_ids), mats_ids)
+        id_min = min(mats_ids)
+        id_max = max(mats_ids)
+        msg += "\n\nLowest ID: %s\nHighest ID: %s\n"%(id_min, id_max)
+        missing_ids = []
+        for i in xrange(id_min, id_max + 1):
+            if i not in mats_ids:
+                missing_ids.append(i)
+        if missing_ids:
+                msg += "\nIDs not in the list:\n%s\n(%s IDs)\n"%(missing_ids, len(missing_ids))
+        open(file_name, 'w').write(msg)
+        print "Written to '%s'"%file_name
 
 
 _indices = rollaxis(indices((id_limit, 16)), 0, 3)
@@ -1225,4 +1281,39 @@ for mat in allMaterials:
             continue
         setattr(block, "Blockstate", BlockstateAPI.material_map[mat].idToBlockstate(block.ID, block.blockData))
 
-__all__ = "indevMaterials, pocketMaterials, alphaMaterials, classicMaterials, namedMaterials, MCMaterials".split(", ")
+__all__ = "indevMaterials, pocketMaterials, alphaMaterials, classicMaterials, namedMaterials, MCMaterials, BlockstateAPI".split(", ")
+
+
+if '--dump-mats' in os.sys.argv:
+    os.sys.argv.remove('--dump-mats')
+    for n in ("indevMaterials", "pocketMaterials", "alphaMaterials", "classicMaterials"):
+        printStaticDefs(n, "%s.mats"%n.split('M')[0])
+        
+if '--find-blockstates' in os.sys.argv:
+    pe_blockstates = {'minecraft': {}}
+    passed = []
+    failed = []
+    for block in pocketMaterials:
+        ID = block.ID
+        DATA = block.blockData
+        pc_block = alphaMaterials.get((ID, DATA))
+        if pc_block and pc_block.stringID == block.stringID:
+            #print block
+            passed.append(block)
+        else:
+            failed.append(block)
+    print '{} failed block check'.format(len(failed))
+    for block in failed:
+        print '!{}!'.format(block)
+    for block in passed:
+        if block.stringID not in pe_blockstates["minecraft"]:
+            pe_blockstates["minecraft"][block.stringID] = {}
+            pe_blockstates["minecraft"][block.stringID]["id"] = block.ID
+            pe_blockstates["minecraft"][block.stringID]["properties"] = []
+        blockstate = idToBlockstate(block.ID, block.blockData)
+        state = {"<data>": block.blockData}
+        for (key, value) in blockstate[1].iteritems():
+            state[key] = value
+        pe_blockstates["minecraft"][block.stringID]['properties'].append(state)
+    #with open('pe_blockstates_test.json', 'wb') as out:
+    #    json.dump(pe_blockstates, out, indent=4, separators=(',', ': '))

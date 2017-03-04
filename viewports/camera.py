@@ -508,6 +508,8 @@ class CameraViewport(GLViewport):
                 mobs.append(name)
 
         tileEntity = self.editor.level.tileEntityAt(*point)
+#         print self.editor.level.tileEntityAt
+#         print tileEntity
         undoBackupEntityTag = copy.deepcopy(tileEntity)
 
         if not tileEntity:
@@ -568,6 +570,7 @@ class CameraViewport(GLViewport):
             _id = "[Custom]"
 
         id = MCEDIT_DEFS.get(MCEDIT_IDS.get(_id, _id), {}).get("name", _id)
+#         print "_id", _id, "id", id
 
         addMob(id)
 
@@ -604,42 +607,46 @@ class CameraViewport(GLViewport):
                 return pymclevel.BoundingBox(pymclevel.TileEntity.pos(tileEntity), (1, 1, 1))
 
         if id != selectedMob():
-            if "EntityId" in tileEntity:
-                tileEntity["EntityId"] = pymclevel.TAG_String(selectedMob())
-            if "SpawnData" in tileEntity:
-                # Try to not clear the spawn data, but only update the mob id
-#                 tileEntity["SpawnData"] = pymclevel.TAG_Compound()
-                tag_id = pymclevel.TAG_String(selectedMob())
-                if "id" in tileEntity["SpawnData"]:
-                    tag_id.name = "id"
-                    tileEntity["SpawnData"]["id"] = tag_id
-                if "EntityId" in tileEntity["SpawnData"]:
-                    tileEntity["SpawnData"]["EntityId"] = tag_id
-            if "SpawnPotentials" in tileEntity:
-                for potential in tileEntity["SpawnPotentials"]:
-                    if "Entity" in potential:
-                        # MC 1.9+
-                        if potential["Entity"]["id"].value == id or ("EntityId" in potential["Entity"] and potential["Entity"]["EntityId"].value == id):
-                            potential["Entity"] = pymclevel.TAG_Compound()
-                            potential["Entity"]["id"] = pymclevel.TAG_String(selectedMob())
-                    elif "Properties" in potential:
-                        # MC before 1.9
-                        if "Type" in potential and potential["Type"].value == id:
-                            potential["Type"] = pymclevel.TAG_String(selectedMob())
-                        # We also can change some other values in the Properties tag, but it is useless in MC 1.8+.
-                        # The fact is this data will not be updated by the game after the mob type is changed, but the old mob will not spawn.
-#                         put_entityid = False
-#                         put_id = False
-#                         if "EntityId" in potential["Properties"] and potential["Properties"]["EntityId"].value == id:
-#                             put_entityid = True
-#                         if "id" in potential["Properties"] and potential["Properties"]["id"].value == id:
-#                             put_id = True
-#                         new_props = pymclevel.TAG_Compound()
-#                         if put_entityid:
-#                             new_props["EntityId"] = pymclevel.TAG_String(selectedMob())
-#                         if put_id:
-#                             new_props["id"] = pymclevel.TAG_String(selectedMob())
-#                         potential["Properties"] = new_props
+            # If the level has a 'setSpawnerData, call it instead of using the code here
+            if hasattr(self.editor.level, "setSpawnerData"):
+                tileEntity = self.editor.level.setSpawnerData(tileEntity, selectedMob())
+            else:
+                if "EntityId" in tileEntity:
+                    tileEntity["EntityId"] = pymclevel.TAG_String(selectedMob())
+                if "SpawnData" in tileEntity:
+                    # Try to not clear the spawn data, but only update the mob id
+    #                 tileEntity["SpawnData"] = pymclevel.TAG_Compound()
+                    tag_id = pymclevel.TAG_String(selectedMob())
+                    if "id" in tileEntity["SpawnData"]:
+                        tag_id.name = "id"
+                        tileEntity["SpawnData"]["id"] = tag_id
+                    if "EntityId" in tileEntity["SpawnData"]:
+                        tileEntity["SpawnData"]["EntityId"] = tag_id
+                if "SpawnPotentials" in tileEntity:
+                    for potential in tileEntity["SpawnPotentials"]:
+                        if "Entity" in potential:
+                            # MC 1.9+
+                            if potential["Entity"]["id"].value == id or ("EntityId" in potential["Entity"] and potential["Entity"]["EntityId"].value == id):
+                                potential["Entity"] = pymclevel.TAG_Compound()
+                                potential["Entity"]["id"] = pymclevel.TAG_String(selectedMob())
+                        elif "Properties" in potential:
+                            # MC before 1.9
+                            if "Type" in potential and potential["Type"].value == id:
+                                potential["Type"] = pymclevel.TAG_String(selectedMob())
+                            # We also can change some other values in the Properties tag, but it is useless in MC 1.8+.
+                            # The fact is this data will not be updated by the game after the mob type is changed, but the old mob will not spawn.
+    #                         put_entityid = False
+    #                         put_id = False
+    #                         if "EntityId" in potential["Properties"] and potential["Properties"]["EntityId"].value == id:
+    #                             put_entityid = True
+    #                         if "id" in potential["Properties"] and potential["Properties"]["id"].value == id:
+    #                             put_id = True
+    #                         new_props = pymclevel.TAG_Compound()
+    #                         if put_entityid:
+    #                             new_props["EntityId"] = pymclevel.TAG_String(selectedMob())
+    #                         if put_id:
+    #                             new_props["id"] = pymclevel.TAG_String(selectedMob())
+    #                         potential["Properties"] = new_props
             op = MonsterSpawnerEditOperation(self.editor, self.editor.level)
             self.editor.addOperation(op)
             if op.canUndo:
@@ -866,7 +873,7 @@ class CameraViewport(GLViewport):
         tileEntity = self.editor.level.tileEntityAt(*point)
         undoBackupEntityTag = copy.deepcopy(tileEntity)
 
-        linekeys = ["Text" + str(i) for i in range(1, 5)]
+        linekeys = ["Text" + str(i) for i in xrange(1, 5)]
 
         # From version 1.8, signs accept Json format.
         # 1.9 does no more support the old raw string fomat.
@@ -882,8 +889,8 @@ class CameraViewport(GLViewport):
 
         if not tileEntity:
             tileEntity = pymclevel.TAG_Compound()
-             # Don't know how to handle the difference between wall and standing signs for now...
-             # Just let this like it is until we can find the way!
+            # Don't know how to handle the difference between wall and standing signs for now...
+            # Just let this like it is until we can find the way!
             tileEntity["id"] = pymclevel.TAG_String("Sign")
             tileEntity["x"] = pymclevel.TAG_Int(point[0])
             tileEntity["y"] = pymclevel.TAG_Int(point[1])
@@ -1533,8 +1540,10 @@ class CameraViewport(GLViewport):
         self.toggleMouseLook()
 
     def rightClickUp(self, evt):
-        if (not self.should_lock and self.editor.level and
-                not get_top_widget().is_modal):
+        if not get_top_widget().is_modal:
+            return
+        if not self.should_lock and self.editor.level:
+            self.should_lock = False
             self.toggleMouseLook()
         # if self.rightMouseDragStart is None:
         #     return
@@ -1711,12 +1720,13 @@ class CameraViewport(GLViewport):
         lines = []
         minz = minx = -256
         maxz = maxx = 256
-        for x in range(minx, maxx + 1, 16):
-            lines.append((x, 0, minz))
-            lines.append((x, 0, maxz))
-        for z in range(minz, maxz + 1, 16):
-            lines.append((minx, 0, z))
-            lines.append((maxx, 0, z))
+        append = lines.append
+        for x in xrange(minx, maxx + 1, 16):
+            append((x, 0, minz))
+            append((x, 0, maxz))
+        for z in xrange(minz, maxz + 1, 16):
+            append((minx, 0, z))
+            append((maxx, 0, z))
 
         GL.glColor(0.3, 0.7, 0.9)
         GL.glVertexPointer(3, GL.GL_FLOAT, 0, numpy.array(lines, dtype='float32'))
@@ -1998,8 +2008,8 @@ class SpawnerInfoParser(BlockInfoParser):
                     value = repr(NameError("Malformed spawn data: could not find 'EntityId' or 'id' tag."))
                 else:
                     value = id.value
-                return str(value) + " Spawner" + self.nbt_ending + self.edit_ending
-        return "[Empty]"  + self.nbt_ending + self.edit_ending
+                return "{} Spawner{}{}".format(value, self.nbt_ending, self.edit_ending)
+        return "[Empty]{}{}".format(self.nbt_ending, self.edit_ending)
     
 class JukeboxInfoParser(BlockInfoParser):
     id_records = {
@@ -2048,8 +2058,8 @@ class JukeboxInfoParser(BlockInfoParser):
             elif "RecordItem" in tile_entity:
                 value = tile_entity["RecordItem"]["id"].value
                 if value in self.name_records:
-                    return self.name_records[value] + " Record" + self.nbt_ending + self.edit_ending
-        return "[No Record]"  + self.nbt_ending + self.edit_ending
+                    return "{} Record{}{}".format(self.name_records[value], self.nbt_ending, self.edit_ending)
+        return "[No Record]{}{}".format(self.nbt_ending, self.edit_ending)
     
 class CommandBlockInfoParser(BlockInfoParser):
     
@@ -2069,9 +2079,9 @@ class CommandBlockInfoParser(BlockInfoParser):
             value = tile_entity.get("Command", TAG_String("")).value
             if value:
                 if len(value) > 1500:
-                    return value[:1500] + "\n**COMMAND IS TOO LONG TO SHOW MORE**" + self.nbt_ending + self.edit_ending
-                return value + self.nbt_ending + self.edit_ending
-        return "[Empty Command Block]"  + self.nbt_ending + self.edit_ending
+                    return "{}\n**COMMAND IS TOO LONG TO SHOW MORE**{}{}".format(value[:1500], self.nbt_ending, self.edit_ending)
+                return "{}{}{}".format(value, self.nbt_ending, self.edit_ending)
+        return "[Empty Command Block]{}{}".format(self.nbt_ending, self.edit_ending)
     
 class ContainerInfoParser(BlockInfoParser):
     
@@ -2093,8 +2103,8 @@ class ContainerInfoParser(BlockInfoParser):
     def parse_info(self, pos):
         tile_entity = self.level.tileEntityAt(*pos)
         if tile_entity:
-            return "Contains {} Items".format(len(tile_entity.get("Items", []))) + self.nbt_ending + self.edit_ending
-        return "[Empty Container]" + self.nbt_ending + self.edit_ending
+            return "Contains {} Items {}{}".format(len(tile_entity.get("Items", [])), self.nbt_ending, self.edit_ending)
+        return "[Empty Container]{}{}".format(self.nbt_ending + self.edit_ending)
 
 def unproject(x, y, z):
     try:

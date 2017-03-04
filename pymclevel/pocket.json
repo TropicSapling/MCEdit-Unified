@@ -1215,6 +1215,20 @@
             "id": 24
         },
         {
+            "tex": [
+                11,
+                4
+            ],
+            "idStr": "note_block",
+            "mapcolor": [
+                0,
+                0,
+                0
+            ],
+            "id": 25,
+            "name": "Note Block"
+        },
+        {
             "opacity": 0,
             "name": "Bed",
             "type": "BED",
@@ -2795,6 +2809,72 @@
             "id": 54
         },
         {
+            "opacity": 0,
+            "search": "wire",
+            "type": "FLOOR",
+            "idStr": "redstone_wire",
+            "tex": [
+                31,
+                31
+            ],
+            "mapcolor": [
+                245,
+                50,
+                50
+            ],
+            "data": {
+                "0": {
+                    "name": "Redstone Dust (Power 0)"
+                },
+                "1": {
+                    "name": "Redstone Dust (Power 1)"
+                },
+                "2": {
+                    "name": "Redstone Dust (Power 2)"
+                },
+                "3": {
+                    "name": "Redstone Dust (Power 3)"
+                },
+                "4": {
+                    "name": "Redstone Dust (Power 4)"
+                },
+                "5": {
+                    "name": "Redstone Dust (Power 5)"
+                },
+                "6": {
+                    "name": "Redstone Dust (Power 6)"
+                },
+                "7": {
+                    "name": "Redstone Dust (Power 7)"
+                },
+                "8": {
+                    "name": "Redstone Dust (Power 8)"
+                },
+                "9": {
+                    "name": "Redstone Dust (Power 9)"
+                },
+                "10": {
+                    "name": "Redstone Dust (Power 10)"
+                },
+                "11": {
+                    "name": "Redstone Dust (Power 11)"
+                },
+                "12": {
+                    "name": "Redstone Dust (Power 12)"
+                },
+                "13": {
+                    "name": "Redstone Dust (Power 13)"
+                },
+                "14": {
+                    "name": "Redstone Dust (Power 14)"
+                },
+                "15": {
+                    "name": "Redstone Dust (Power 15)"
+                }
+            },
+            "id": 55
+        },
+        {
             "tex": [
                 2,
                 3
@@ -3520,6 +3600,22 @@
             "id": 74
         },
         {
+            "tex": [
+                20,
+                8
+            ],
+            "idStr": "button",
+            "mapcolor": [
+                0,
+                0,
+                0
+            ],
+	    "opacity": 0,
+	    "type": "BUTTON",
+            "id": 77,
+            "name": "Stone Button"
+        },
+        {
             "opacity": 0,
             "name": "Snow Layer",
             "type": "THINSLICE",
@@ -4091,7 +4187,219 @@
                 }
             },
             "id": 92
-        },
+        },{
+			"opacity": 0,
+			"name": "Redstone Repeater",
+			"data": {
+				"11": {
+					"tex_direction": {
+						"TOP": [18,9]
+					},
+					"name": "Redstone Repeater (Unpowered, Delay 3, East)"
+				},
+				"10": {
+					"tex_direction": {
+						"TOP": [18,8]
+					},
+					"name": "Redstone Repeater (Unpowered, Delay 3, North)"
+				},
+				"13": {
+					"tex_direction": {
+						"TOP": [18,7]
+					},
+					"name": "Redstone Repeater (Unpowered, Delay 4, West)"
+				},
+				"12": {
+					"tex_direction": {
+						"TOP": [3,8]
+					},
+					"name": "Redstone Repeater (Unpowered, Delay 4, South)"
+				},
+				"15": {
+					"tex_direction": {
+						"TOP": [18,9]
+					},
+					"name": "Redstone Repeater (Unpowered, Delay 4, East)"
+				},
+				"14": {
+					"tex_direction": {
+						"TOP": [18,8]
+					},
+					"name": "Redstone Repeater (Unpowered, Delay 4, North)"
+				},
+				"1": {
+					"tex_direction": {
+						"TOP": [18,7]
+					},
+					"name": "Redstone Repeater (Unpowered, Delay 1, West)"
+				},
+				"0": {
+					"tex_direction": {
+						"TOP": [3,8]
+					},
+					"name": "Redstone Repeater (Unpowered, Delay 1, South)"
+				},
+				"3": {
+					"tex_direction": {
+						"TOP": [18,9]
+					},
+					"name": "Redstone Repeater (Unpowered, Delay 1, East)"
+				},
+				"2": {
+					"tex_direction": {
+						"TOP": [18,8]
+					},
+					"name": "Redstone Repeater (Unpowered, Delay 1, North)"
+				},
+				"5": {
+					"tex_direction": {
+						"TOP": [18,7]
+					},
+					"name": "Redstone Repeater (Unpowered, Delay 2, West)"
+				},
+				"4": {
+					"tex_direction": {
+						"TOP": [3,8]
+					},
+					"name": "Redstone Repeater (Unpowered, Delay 2, South)"
+				},
+				"7": {
+					"tex_direction": {
+						"TOP": [18,9]
+					},
+					"name": "Redstone Repeater (Unpowered, Delay 2, East)"
+				},
+				"6": {
+					"tex_direction": {
+						"TOP": [18,8]
+					},
+					"name": "Redstone Repeater (Unpowered, Delay 2, North)"
+				},
+				"9": {
+					"tex_direction": {
+						"TOP": [18,7]
+					},
+					"name": "Redstone Repeater (Unpowered, Delay 3, West)"
+				},
+				"8": {
+					"tex_direction": {
+						"TOP": [3,8]
+					},
+					"name": "Redstone Repeater (Unpowered, Delay 3, South)"
+				}
+			},
+			"idStr": "unpowered_repeater",
+			"tex": [3,8],
+			"mapcolor": [245,50,50],
+			"type": "THINSLICE",
+			"id": 93
+		},{
+			"opacity": 0,
+			"name": "Redstone Repeater",
+			"data": {
+				"11": {
+					"tex_direction": {
+						"TOP": [18,12]
+					},
+					"name": "Redstone Repeater (Powered, Delay 3, West)"
+				},
+				"10": {
+					"tex_direction": {
+						"TOP": [18,11]
+					},
+					"name": "Redstone Repeater (Powered, Delay 3, South)"
+				},
+				"13": {
+					"tex_direction": {
+						"TOP": [18,10]
+					},
+					"name": "Redstone Repeater (Powered, Delay 4, East)"
+				},
+				"12": {
+					"tex_direction": {
+						"TOP": [3,9]
+					},
+					"name": "Redstone Repeater (Powered, Delay 4, North)"
+				},
+				"15": {
+					"tex_direction": {
+						"TOP": [18,12]
+					},
+					"name": "Redstone Repeater (Powered, Delay 4, West)"
+				},
+				"14": {
+					"tex_direction": {
+						"TOP": [18,11]
+					},
+					"name": "Redstone Repeater (Powered, Delay 4, South)"
+				},
+				"1": {
+					"tex_direction": {
+						"TOP": [18,10]
+					},
+					"name": "Redstone Repeater (Powered, Delay 1, East)"
+				},
+				"0": {
+					"tex_direction": {
+						"TOP": [3,9]
+					},
+					"name": "Redstone Repeater (Powered, Delay 1, North)"
+				},
+				"3": {
+					"tex_direction": {
+						"TOP": [18,12]
+					},
+					"name": "Redstone Repeater (Powered, Delay 1, West)"
+				},
+				"2": {
+					"tex_direction": {
+						"TOP": [18,11]
+					},
+					"name": "Redstone Repeater (Powered, Delay 1, South)"
+				},
+				"5": {
+					"tex_direction": {
+						"TOP": [18,10]
+					},
+					"name": "Redstone Repeater (Powered, Delay 2, East)"
+				},
+				"4": {
+					"tex_direction": {
+						"TOP": [3,9]
+					},
+					"name": "Redstone Repeater (Powered, Delay 2, North)"
+				},
+				"7": {
+					"tex_direction": {
+						"TOP": [18,12]
+					},
+					"name": "Redstone Repeater (Powered, Delay 2, West)"
+				},
+				"6": {
+					"tex_direction": {
+						"TOP": [18,11]
+					},
+					"name": "Redstone Repeater (Powered, Delay 2, South)"
+				},
+				"9": {
+					"tex_direction": {
+						"TOP": [18,10]
+					},
+					"name": "Redstone Repeater (Powered, Delay 3, East)"
+				},
+				"8": {
+					"tex_direction": {
+						"TOP": [3,9]
+					},
+					"name": "Redstone Repeater (Powered, Delay 3, North)"
+				}
+			},
+			"idStr": "powered_repeater",
+			"tex": [3,9],
+			"mapcolor": [245,50,50],
+			"type": "THINSLICE",
+			"id": 94
+		},
         {
             "tex": [
                 31,

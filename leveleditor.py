@@ -227,9 +227,9 @@ class LevelEditor(GLViewport):
 
         def chooseDistance():
             self.changeViewDistance(int(self.viewDistanceReadout.get_value()))
-        if self.renderer.viewDistance not in range(2,32,2):
+        if self.renderer.viewDistance not in xrange(2,32,2):
             self.renderer.viewDistance = 8
-        self.viewDistanceReadout = ChoiceButton(["%s"%a for a in range(2,34,2)], width=20, ref=AttrRef(self.renderer, "viewDistance"), choose=chooseDistance)
+        self.viewDistanceReadout = ChoiceButton(["%s"%a for a in xrange(2,34,2)], width=20, ref=AttrRef(self.renderer, "viewDistance"), choose=chooseDistance)
         self.viewDistanceReadout.selectedChoice = "%s"%self.renderer.viewDistance
         self.viewDistanceReadout.shrink_wrap()
 
@@ -338,7 +338,8 @@ class LevelEditor(GLViewport):
             self.topRow.calc_size()
             self.controlPanel.set_update_ui(v)
             # Update the unparented widgets.
-            [a.set_update_ui(v) for a in unparented.values()]
+            for a in unparented.values(): 
+                a.set_update_ui(v) 
     #-#
 
     def __del__(self):
@@ -603,7 +604,7 @@ class LevelEditor(GLViewport):
             return p
 
         page = []
-        for i in range(len(self.copyStack)):
+        for i in xrange(len(self.copyStack)):
             sch = self.copyStack[i]
             p = createOneCopyPanel(sch, i)
             if self.netherPanel is None:
@@ -637,7 +638,7 @@ class LevelEditor(GLViewport):
             else:
                 return
             self.currentCopyPage = m(*a)
-            for i in range(len(this.pages)):
+            for i in xrange(len(this.pages)):
                 page = this.pages[i]
                 if i == self.currentCopyPage:
                     page.visible = True
@@ -1112,7 +1113,7 @@ class LevelEditor(GLViewport):
                               GL.GL_TEXTURE_MAX_LEVEL,
                               maxLevel - 1)
 
-            for lev in range(maxLevel):
+            for lev in xrange(maxLevel):
                 step = 1 << lev
                 if lev:
                     teximage[::16] = 0xff
@@ -2108,7 +2109,7 @@ class LevelEditor(GLViewport):
             if os.path.exists(p):
                 os.remove(p)
         if config.settings.savePositionOnClose.get():
-            self.waypointManager.saveLastPosition(self.mainViewport, self.level.getPlayerDimension())
+            self.waypointManager.saveLastPosition(self.mainViewport, self.level.dimNo)
         self.waypointManager.save()
         self.clearUnsavedEdits()
         self.unsavedEdits = 0
@@ -2942,7 +2943,6 @@ class LevelEditor(GLViewport):
     averageFPS = 0.0
     averageCPS = 0.0
     shouldLoadAndRender = True
-    showWorkInfo = False
 
 
     def gl_draw(self):
@@ -2967,8 +2967,6 @@ class LevelEditor(GLViewport):
         while frameDuration > (
                     datetime.now() - self.frameStartTime):  # if it's less than 0ms until the next frame, go draw.  otherwise, go work.
             self.doWorkUnit()
-        if self.showWorkInfo:
-            self.updateWorkInfoPanel()
 
         frameStartTime = datetime.now()
         timeDelta = frameStartTime - self.frameStartTime
@@ -3012,38 +3010,6 @@ class LevelEditor(GLViewport):
             if self.renderer:
                 self.renderer.addDebugInfo(self.addDebugString)
 
-    def createWorkInfoPanel(self):
-        infos = []
-        for w in sorted(self.workers):
-            if isinstance(w, MCRenderer):
-                label = Label(_("Rendering chunks") + ((datetime.now().second / 3) % 3) * ".")
-                progress = Label(
-                    _("{0} chunks ({1} pending updates)").format(len(w.chunkRenderers), len(w.invalidChunkQueue)))
-                col = Column((label, progress), align="l", width=200)
-                infos.append(col)
-            elif isinstance(w,
-                            RunningOperation):  # **FIXME** Where is RunningOperation supposed to come from?  -David Sowder 20120311
-                label = Label(w.description)
-                progress = Label(w.progress)
-                col = Column((label, progress), align="l", width=200)
-                infos.append(col)
-
-        panel = Panel(parent=self)
-        if len(infos):
-            panel.add(Column(infos))
-            panel.shrink_wrap()
-            return panel
-
-    workInfoPanel = None
-
-    def updateWorkInfoPanel(self):
-        if self.workInfoPanel:
-            self.workInfoPanel.set_parent(None)
-        self.workInfoPanel = self.createWorkInfoPanel()
-        if self.workInfoPanel:
-            self.workInfoPanel.topright = self.topright
-            self.add(self.workInfoPanel)
-
     def doWorkUnit(self, onMenu=False):
         if len(self.workers):
             try:
@@ -3054,7 +3020,8 @@ class LevelEditor(GLViewport):
                 if hasattr(w, "needsRedraw") and w.needsRedraw:
                     self.invalidate()
 
-        time.sleep(0.001)
+        if onMenu:
+            time.sleep(0.001)
 
     def updateInspectionString(self, blockPosition):
         self.inspectionString += str(blockPosition) + ": "
@@ -3500,7 +3467,7 @@ class EditorToolbar(GLOrtho):
 
         GL.glDrawArrays(GL.GL_QUADS, 0, 4)
 
-        for i in range(len(self.tools)):
+        for i in xrange(len(self.tools)):
             tool = self.tools[i]
             if tool.toolIconName is None:
                 continue
@@ -3591,7 +3558,7 @@ class EditorToolbar(GLOrtho):
 
         redOutBoxes = numpy.zeros(9 * 4 * 2, dtype='float32')
         cursor = 0
-        for i in range(len(self.tools)):
+        for i in xrange(len(self.tools)):
             t = self.tools[i]
             if t.toolEnabled():
                 continue
